@@ -11,6 +11,9 @@ benchmark/*/queries-vectorwise/*.err
 benchmark/*/queries-vectorwise/*.ret
 
 benchmark-transferred
+benchmark-classified
 
 .idea
 *.iml
+
+target
