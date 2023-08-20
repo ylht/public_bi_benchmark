@@ -51,6 +51,15 @@ public class TransferWorkload {
         return sqlContent.replace("MEDIAN", "MIN");
     }
 
+    private static String replaceLocateWithLike(String sqlContent) {
+        for (int i = 3; i < 8; i++) {
+            sqlContent = sqlContent.replace("locate('THE BISHOPS AVENUE',realestate2_" + i + ".street)>0",
+                    "realestate2_" + i + ".street like '%THE BISHOPS AVENUE%'");
+        }
+
+        return sqlContent;
+    }
+
     public static void deleteFolder(File folder) {
         if (folder.isDirectory()) {
             File[] files = folder.listFiles();
@@ -81,6 +90,7 @@ public class TransferWorkload {
                     String sqlContent = replaceEachSQlFileWithLowerCaseAscii(sql.toPath());
                     sqlContent = replaceDoubleWithDoublePrecision(sqlContent);
                     sqlContent = replaceMedianWithMin(sqlContent);
+                    sqlContent = replaceLocateWithLike(sqlContent);
                     Files.write(outputBenchmarkDir.resolve(sql.getName()), sqlContent.getBytes());
                     i++;
                 }
