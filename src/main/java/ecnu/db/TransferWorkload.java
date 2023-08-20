@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TransferWorkload {
 
@@ -60,6 +62,93 @@ public class TransferWorkload {
         return sqlContent;
     }
 
+    private static String replaceEqualDate(String sqlContent) {
+        Pattern pattern = Pattern.compile("CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) = \\d+");
+        Matcher matcher = pattern.matcher(sqlContent);
+        while (matcher.find()) {
+            String dateCompute = matcher.group();
+            String[] allMatches = dateCompute.split(" ");
+            String columnName = allMatches[2].substring(0, allMatches[2].length() - 1);
+            sqlContent = sqlContent.replace(dateCompute,
+                    columnName + " >= " + allMatches[allMatches.length - 1] + "-1-1 and "
+                            + columnName + " <= " + allMatches[allMatches.length - 1] + "-12-31");
+        }
+        return sqlContent;
+    }
+
+    private static String replaceIsNullDate(String sqlContent) {
+        Pattern pattern = Pattern.compile("CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) IS NULL");
+        Matcher matcher = pattern.matcher(sqlContent);
+        while (matcher.find()) {
+            String dateCompute = matcher.group();
+            String[] allMatches = dateCompute.split(" ");
+            String columnName = allMatches[2].substring(0, allMatches[2].length() - 1);
+            sqlContent = sqlContent.replace(dateCompute, columnName + " IS NULL ");
+        }
+        return sqlContent;
+    }
+
+    private static String replaceBetDate(String sqlContent) {
+        Pattern pattern = Pattern.compile("\\(CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) >= \\d+\\) " +
+                "AND \\(CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) <= \\d+\\)");
+        Matcher matcher = pattern.matcher(sqlContent);
+        while (matcher.find()) {
+            String dateCompute = matcher.group();
+            String[] betPredicates = dateCompute.split(" AND ");
+            String[] firstMatches = betPredicates[0].split(" ");
+            String[] secondMatches = betPredicates[1].split(" ");
+            String firstColumnName = firstMatches[2].substring(0, firstMatches[2].length() - 1);
+            String secondColumnName = secondMatches[2].substring(0, secondMatches[2].length() - 1);
+            if (!firstColumnName.equals(secondColumnName)) {
+                throw new UnsupportedOperationException();
+            }
+            sqlContent = sqlContent.replace(dateCompute,
+                    firstColumnName + " >= " + firstMatches[firstMatches.length - 1].replace(")", "") + "-1-1 and "
+                            + firstColumnName + " <= " + secondMatches[secondMatches.length - 1].replace(")", "") + "-12-31");
+        }
+        return sqlContent;
+    }
+
+
+    private static String replaceInDate(String sqlContent) {
+        Pattern pattern = Pattern.compile("CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) IN \\(\\d+(, \\d+)+\\)");
+        Matcher matcher = pattern.matcher(sqlContent);
+        while (matcher.find()) {
+            String dateCompute = matcher.group();
+            String[] predicateAndInParameters = dateCompute.split(" IN ");
+            String[] allMatches = predicateAndInParameters[0].split(" ");
+            String columnName = allMatches[2].substring(0, allMatches[2].length() - 1);
+            String[] parametersMatches = predicateAndInParameters[1].substring(1, predicateAndInParameters[1].length() - 1).split(",");
+            int start = Integer.parseInt(parametersMatches[0].trim());
+            int old = start;
+            for (int i = 1; i < parametersMatches.length; i++) {
+                int current = Integer.parseInt(parametersMatches[i].trim());
+                if (current != old + 1) {
+                    throw new UnsupportedOperationException();
+                }
+                old = current;
+            }
+            sqlContent = sqlContent.replace(dateCompute, columnName + " >= " + start + "-1-1 and " + columnName + " <= " + old + "-12-31");
+        }
+        return sqlContent;
+    }
+
+    private static String replaceWhereExtractWithBetweenAnd(String sqlContent) {
+        int index = sqlContent.toLowerCase().indexOf("where");
+        if (index >= 0) {
+            String whereCondition = sqlContent.substring(index + 5);
+            whereCondition = replaceEqualDate(whereCondition);
+            whereCondition = replaceInDate(whereCondition);
+            whereCondition = replaceIsNullDate(whereCondition);
+            whereCondition = replaceBetDate(whereCondition);
+            if (whereCondition.toLowerCase().contains("extract")) {
+                System.out.println(whereCondition);
+            }
+            sqlContent = sqlContent.substring(0, index) + whereCondition;
+        }
+        return sqlContent;
+    }
+
     public static void deleteFolder(File folder) {
         if (folder.isDirectory()) {
             File[] files = folder.listFiles();
@@ -91,6 +180,7 @@ public class TransferWorkload {
                     sqlContent = replaceDoubleWithDoublePrecision(sqlContent);
                     sqlContent = replaceMedianWithMin(sqlContent);
                     sqlContent = replaceLocateWithLike(sqlContent);
+                    sqlContent = replaceWhereExtractWithBetweenAnd(sqlContent);
                     Files.write(outputBenchmarkDir.resolve(sql.getName()), sqlContent.getBytes());
                     i++;
                 }
