@@ -12,19 +12,49 @@ public class ClassifyWorkload {
     private static final Path transferWorkloadPath = Path.of("benchmark-transferred");
     private static final Path classifyWorkloadPath = Path.of("benchmark-classified");
     private static final Path classifyWorkloadAndOrPath = Path.of("benchmark-classified-andor");
+    private static final Path classifyWorkloadIsNullPath = Path.of("benchmark-classified-isnull");
     //按照where数量分类
-    private static final Path noWherePath = Path.of("benchmark-classified\\noWhere");
-    private static final Path oneWherePath = Path.of("benchmark-classified\\oneWhere");
-    private static final Path twoWherePath = Path.of("benchmark-classified\\twoWhere");
+    private static final Path noWherePath = Path.of("benchmark-classified/noWhere");
+    private static final Path oneWherePath = Path.of("benchmark-classified/oneWhere");
+    private static final Path twoWherePath = Path.of("benchmark-classified/twoWhere");
     //按照and和or类型分类
-    private static final Path andPath = Path.of("benchmark-classified-andor\\and");
-    private static final Path orPath = Path.of("benchmark-classified-andor\\or");
-    private static final Path andOrPath = Path.of("benchmark-classified-andor\\and-or");
+    private static final Path andPath = Path.of("benchmark-classified-andor/and");
+    private static final Path orPath = Path.of("benchmark-classified-andor/or");
+    private static final Path andOrPath = Path.of("benchmark-classified-andor/and-or");
+    //按照有没有isnull关键字分类
+    private static final Path isNullPath = Path.of("benchmark-classified-isnull/isnull");
+    private static final Path notIsNullPath = Path.of("benchmark-classified-isnull/notisnull");
     private static final Pattern queriesPattern = Pattern.compile("[0-9]+\\.sql");
 
     public static void main(String[] args) throws IOException {
         //classifyWhereCount();
-        classifyAndOr();
+        //classifyAndOr();
+        classifyIsNull();
+    }
+
+    public static void classifyIsNull() throws IOException {
+        deleteFolder(classifyWorkloadIsNullPath.toFile());
+        Files.createDirectories(isNullPath);
+        Files.createDirectories(notIsNullPath);
+        File file = transferWorkloadPath.toFile();
+        List<File> allSqlFile = searchFiles(file, ".sql");
+        for (File file1 : allSqlFile) {
+            String isNullPattern = "is null";
+            StringBuilder s = new StringBuilder();
+            for (String readAllLine : Files.readAllLines(file1.toPath())) {
+                s.append(readAllLine);
+                String sqlName = file1.getPath().replace("\\","/").split("/")[1] + "_" + file1.getPath().replace("\\","/").split("/")[2];
+                if (s.toString().toLowerCase().contains(isNullPattern)) {
+                    String fileName = isNullPath.toString() + "/" + sqlName;
+                    File file2 = new File(fileName);
+                    copyFileUsingIOStream(file1, file2);
+                } else {
+                    String fileName = notIsNullPath.toString() + "/" + sqlName;
+                    File file2 = new File(fileName);
+                    copyFileUsingIOStream(file1, file2);
+                }
+            }
+        }
     }
 
     public static void classifyAndOr() throws IOException {
@@ -42,29 +72,26 @@ public class ClassifyWorkload {
                 s.append(readAllLine);
             }
             String originS = s.toString();
-            String sqlName = file1.getPath().split("\\\\")[1] + "_" + file1.getPath().split("\\\\")[2];
-            if(s.toString().contains(andPattern)&&!s.toString().contains(orPattern)){
-                String fileName = andPath.toString() + "\\" + sqlName;
+            String sqlName = file1.getPath().split("/")[1] + "_" + file1.getPath().split("/")[2];
+            if (s.toString().contains(andPattern) && !s.toString().contains(orPattern)) {
+                String fileName = andPath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
-            }else if(!s.toString().contains(andPattern)&&s.toString().contains(orPattern)){
-                String fileName = orPath.toString() + "\\" + sqlName;
+            } else if (!s.toString().contains(andPattern) && s.toString().contains(orPattern)) {
+                String fileName = orPath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
-            }else if(s.toString().contains(andPattern)&&s.toString().contains(orPattern)){
-                String fileName = andOrPath.toString() + "\\" + sqlName;
+            } else if (s.toString().contains(andPattern) && s.toString().contains(orPattern)) {
+                String fileName = andOrPath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
-            }else {
-                String fileName = andPath.toString() + "\\" + sqlName;
+            } else {
+                String fileName = andPath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
                 //System.out.println(originS);
             }
         }
-//        File f = classifyWorkloadAndOrPath.toFile();
-//        List<File> allS = searchFiles(f, ".sql");
-//        System.out.println(f);
     }
 
     public static void classifyWhereCount() throws IOException {
@@ -86,17 +113,17 @@ public class ClassifyWorkload {
                 s = new StringBuilder(s.substring(s.indexOf(wherePattern) + 1));
                 ++count;
             }
-            String sqlName = file1.getPath().split("\\\\")[1] + "_" + file1.getPath().split("\\\\")[2];
+            String sqlName = file1.getPath().split("/")[1] + "_" + file1.getPath().split("/")[2];
             if (count == 0) {
-                String fileName = noWherePath.toString() + "\\" + sqlName;
+                String fileName = noWherePath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
             } else if (count == 1) {
-                String fileName = oneWherePath.toString() + "\\" + sqlName;
+                String fileName = oneWherePath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
             } else if (count > 1) {
-                String fileName = twoWherePath.toString() + "\\" + sqlName;
+                String fileName = twoWherePath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
             } /*else {
