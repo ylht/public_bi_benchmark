@@ -28,8 +28,8 @@ public class ClassifyWorkload {
     private static final Pattern queriesPattern = Pattern.compile("[0-9]+\\.sql");
 
     public static void main(String[] args) throws IOException {
-        classifyWhereCount();
-        //classifyAndOr();
+        //classifyWhereCount();
+        classifyAndOr();
         //classifyIsNull();
     }
 
@@ -63,7 +63,7 @@ public class ClassifyWorkload {
         Files.createDirectories(andPath);
         Files.createDirectories(orPath);
         Files.createDirectories(andOrPath);
-        File file = transferWorkloadPath.toFile();
+        File file = oneWherePath.toFile();
         List<File> allSqlFile = searchFiles(file, ".sql");
         for (File file1 : allSqlFile) {
             String andPattern = " AND ";
@@ -73,7 +73,7 @@ public class ClassifyWorkload {
                 s.append(readAllLine);
             }
             String originS = s.toString();
-            String sqlName = file1.getPath().split("/")[1] + "_" + file1.getPath().split("/")[2];
+            String sqlName = /*file1.getPath().replace("\\","/").split("/")[1] + "_" + */file1.getPath().replace("\\","/").split("/")[2];
             if (s.toString().contains(andPattern) && !s.toString().contains(orPattern)) {
                 String fileName = andPath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
