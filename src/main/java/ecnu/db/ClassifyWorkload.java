@@ -16,6 +16,7 @@ public class ClassifyWorkload {
     //按照where数量分类
     private static final Path noWherePath = Path.of("benchmark-classified/noWhere");
     private static final Path oneWherePath = Path.of("benchmark-classified/oneWhere");
+    private static final Path oneWhereIsNullPath = Path.of("benchmark-classified/oneWhereIsNull");
     private static final Path twoWherePath = Path.of("benchmark-classified/twoWhere");
     //按照and和or类型分类
     private static final Path andPath = Path.of("benchmark-classified-andor/and");
@@ -27,9 +28,9 @@ public class ClassifyWorkload {
     private static final Pattern queriesPattern = Pattern.compile("[0-9]+\\.sql");
 
     public static void main(String[] args) throws IOException {
-        //classifyWhereCount();
+        classifyWhereCount();
         //classifyAndOr();
-        classifyIsNull();
+        //classifyIsNull();
     }
 
     public static void classifyIsNull() throws IOException {
@@ -43,7 +44,7 @@ public class ClassifyWorkload {
             StringBuilder s = new StringBuilder();
             for (String readAllLine : Files.readAllLines(file1.toPath())) {
                 s.append(readAllLine);
-                String sqlName = file1.getPath().replace("\\","/").split("/")[1] + "_" + file1.getPath().replace("\\","/").split("/")[2];
+                String sqlName = file1.getPath().replace("\\", "/").split("/")[1] + "_" + file1.getPath().replace("\\", "/").split("/")[2];
                 if (s.toString().toLowerCase().contains(isNullPattern)) {
                     String fileName = isNullPath.toString() + "/" + sqlName;
                     File file2 = new File(fileName);
@@ -98,8 +99,10 @@ public class ClassifyWorkload {
         deleteFolder(classifyWorkloadPath.toFile());
         Files.createDirectories(noWherePath);
         Files.createDirectories(oneWherePath);
+        Files.createDirectories(oneWhereIsNullPath);
         Files.createDirectories(twoWherePath);
         File file = transferWorkloadPath.toFile();
+        String isNullPattern = "is null";
         List<File> allSqlFile = searchFiles(file, ".sql");
         for (File file1 : allSqlFile) {
             String wherePattern = " WHERE ";
@@ -113,15 +116,21 @@ public class ClassifyWorkload {
                 s = new StringBuilder(s.substring(s.indexOf(wherePattern) + 1));
                 ++count;
             }
-            String sqlName = file1.getPath().split("/")[1] + "_" + file1.getPath().split("/")[2];
+            String sqlName = file1.getPath().replace("\\", "/").split("/")[1] + "_" + file1.getPath().replace("\\", "/").split("/")[2];
             if (count == 0) {
                 String fileName = noWherePath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
                 copyFileUsingIOStream(file1, file2);
             } else if (count == 1) {
-                String fileName = oneWherePath.toString() + "/" + sqlName;
-                File file2 = new File(fileName);
-                copyFileUsingIOStream(file1, file2);
+                if (originS.toLowerCase().contains(isNullPattern)) {
+                    String fileName = oneWhereIsNullPath.toString() + "/" + sqlName;
+                    File file2 = new File(fileName);
+                    copyFileUsingIOStream(file1, file2);
+                } else {
+                    String fileName = oneWherePath.toString() + "/" + sqlName;
+                    File file2 = new File(fileName);
+                    copyFileUsingIOStream(file1, file2);
+                }
             } else if (count > 1) {
                 String fileName = twoWherePath.toString() + "/" + sqlName;
                 File file2 = new File(fileName);
