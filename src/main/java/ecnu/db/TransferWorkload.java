@@ -70,8 +70,8 @@ public class TransferWorkload {
             String[] allMatches = dateCompute.split(" ");
             String columnName = allMatches[2].substring(0, allMatches[2].length() - 1);
             sqlContent = sqlContent.replace(dateCompute,
-                    columnName + " >= " + allMatches[allMatches.length - 1] + "-1-1 and "
-                            + columnName + " <= " + allMatches[allMatches.length - 1] + "-12-31");
+                    columnName + " >= '" + allMatches[allMatches.length - 1] + "-01-01' and "
+                            + columnName + " <= '" + allMatches[allMatches.length - 1] + "-12-31'");
         }
         return sqlContent;
     }
@@ -103,8 +103,8 @@ public class TransferWorkload {
                 throw new UnsupportedOperationException();
             }
             sqlContent = sqlContent.replace(dateCompute,
-                    firstColumnName + " >= " + firstMatches[firstMatches.length - 1].replace(")", "") + "-1-1 and "
-                            + firstColumnName + " <= " + secondMatches[secondMatches.length - 1].replace(")", "") + "-12-31");
+                    firstColumnName + " >= '" + firstMatches[firstMatches.length - 1].replace(")", "") + "-01-01' and "
+                            + firstColumnName + " <= '" + secondMatches[secondMatches.length - 1].replace(")", "") + "-12-31'");
         }
         return sqlContent;
     }
@@ -128,7 +128,7 @@ public class TransferWorkload {
                 }
                 old = current;
             }
-            sqlContent = sqlContent.replace(dateCompute, columnName + " >= " + start + "-1-1 and " + columnName + " <= " + old + "-12-31");
+            sqlContent = sqlContent.replace(dateCompute, columnName + " >= '" + start + "-01-01' and " + columnName + " <= '" + old + "-12-31'");
         }
         return sqlContent;
     }
