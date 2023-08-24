@@ -88,6 +88,11 @@ public class TransferWorkload {
         return sqlContent;
     }
 
+    private static String replaceBoolWithInt(String sqlContent) {
+        return sqlContent.replace("NOT realestate2_7.calculation_222787466257584130",
+                "cast(realestate2_7.calculation_222787466257584130 as int) = 0");
+    }
+
     private static String replaceBetDate(String sqlContent) {
         Pattern pattern = Pattern.compile("\\(CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) >= \\d+\\) " +
                 "AND \\(CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) <= \\d+\\)");
@@ -137,16 +142,26 @@ public class TransferWorkload {
         int index = sqlContent.toLowerCase().indexOf("where");
         if (index >= 0) {
             String whereCondition = sqlContent.substring(index + 5);
+            whereCondition = replaceExtraDateCheck(whereCondition);
             whereCondition = replaceEqualDate(whereCondition);
             whereCondition = replaceInDate(whereCondition);
             whereCondition = replaceIsNullDate(whereCondition);
             whereCondition = replaceBetDate(whereCondition);
-            if (whereCondition.toLowerCase().contains("extract")) {
-                System.out.println(whereCondition);
+            sqlContent = sqlContent.substring(0, index);
+            if (!whereCondition.toLowerCase().contains("extract")) {
+                sqlContent += " WHERE " + whereCondition;
             }
-            sqlContent = sqlContent.substring(0, index) + whereCondition;
         }
         return sqlContent;
+    }
+
+    private static String replaceExtraDateCheck(String whereCondition) {
+        whereCondition = whereCondition.replace(" OR (CAST(EXTRACT(MONTH FROM generico_5.fecha) AS BIGINT) IS NULL)", "");
+        whereCondition = whereCondition.replace("(CAST(EXTRACT(MONTH FROM generico_5.fecha) AS BIGINT) IS NULL) OR ", "");
+        whereCondition = whereCondition.replace("(CAST(EXTRACT(MONTH FROM generico_5.fecha) AS BIGINT) >= 1) AND ", "");
+        whereCondition = whereCondition.replace("(CAST(EXTRACT(MONTH FROM motos_1.fecha) AS BIGINT) >= 1) AND", "");
+        whereCondition = whereCondition.replace("(CAST(EXTRACT(MONTH FROM motos_2.fecha) AS BIGINT) >= 1) AND", "");
+        return whereCondition;
     }
 
     public static void deleteFolder(File folder) {
@@ -159,6 +174,11 @@ public class TransferWorkload {
             }
         }
         folder.delete();
+    }
+
+
+    private static String replaceHavingSum1(String sqlContent) {
+        return sqlContent.replace("HAVING ((SUM(1) >= 30) AND (SUM(1) <= 100000))", "HAVING ((COUNT(1) >= 30) AND (COUNT(1) <= 100000))");
     }
 
     public static void main(String[] args) throws IOException {
@@ -181,6 +201,8 @@ public class TransferWorkload {
                     sqlContent = replaceMedianWithMin(sqlContent);
                     sqlContent = replaceLocateWithLike(sqlContent);
                     sqlContent = replaceWhereExtractWithBetweenAnd(sqlContent);
+                    sqlContent = replaceHavingSum1(sqlContent);
+                    sqlContent = replaceBoolWithInt(sqlContent);
                     Files.write(outputBenchmarkDir.resolve(sql.getName()), sqlContent.getBytes());
                     i++;
                 }
