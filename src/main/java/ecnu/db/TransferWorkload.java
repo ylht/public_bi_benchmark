@@ -62,6 +62,19 @@ public class TransferWorkload {
         return sqlContent;
     }
 
+    private static String replaceDoublePrecision(String sqlContent) {
+        int index = sqlContent.toLowerCase().indexOf("where");
+        if (index >= 0) {
+            Pattern pattern = Pattern.compile("cast\\('-?\\d+\\.\\d+(00000|99999)\\d+' as double precision\\)");
+            Matcher matcher = pattern.matcher(sqlContent);
+            while (matcher.find()) {
+                String doubleNumber = matcher.group().split("'")[1];
+                sqlContent = sqlContent.replace(doubleNumber, String.valueOf(Double.parseDouble(doubleNumber)));
+            }
+        }
+        return sqlContent;
+    }
+
     private static String replaceEqualDate(String sqlContent) {
         Pattern pattern = Pattern.compile("CAST\\(EXTRACT\\(YEAR FROM [0-9a-z._]+\\) AS BIGINT\\) = \\d+");
         Matcher matcher = pattern.matcher(sqlContent);
@@ -203,6 +216,7 @@ public class TransferWorkload {
                     sqlContent = replaceWhereExtractWithBetweenAnd(sqlContent);
                     sqlContent = replaceHavingSum1(sqlContent);
                     sqlContent = replaceBoolWithInt(sqlContent);
+                    sqlContent = replaceDoublePrecision(sqlContent);
                     Files.write(outputBenchmarkDir.resolve(sql.getName()), sqlContent.getBytes());
                     i++;
                 }
